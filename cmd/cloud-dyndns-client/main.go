@@ -35,14 +35,17 @@ import (
 	"github.com/IanLewis/cloud-dyndns-client/pkg/sync"
 )
 
+// VERSION is the current version of the application.
 var VERSION = "0.1.4"
 
+// Domain is a single domain listed in the configuration file.
 type Domain struct {
 	Provider       string                 `json:"provider"`
 	ProviderConfig map[string]interface{} `json:"provider_config"`
 	Backend        backend.DNSBackend
 }
 
+// Config is the configuration contained in the given configuration file.
 type Config struct {
 	Domains map[string]*Domain `json:"domains"`
 }
@@ -57,48 +60,48 @@ func getFileContents(pathToFile string) ([]byte, error) {
 
 	contents, err := ioutil.ReadAll(f)
 	if err != nil {
-		return []byte{}, fmt.Errorf("Could not read %s: %v", f, err)
+		return []byte{}, fmt.Errorf("failed to read	%s: %v", f.Name(), err)
 	}
 
 	return contents, nil
 }
 
-func getConfig(pathToJson string) (Config, error) {
+func getConfig(pathToJSON string) (Config, error) {
 	var cfg Config
 
-	jsonContents, err := getFileContents(pathToJson)
+	jsonContents, err := getFileContents(pathToJSON)
 	if err != nil {
 		return cfg, err
 	}
 
 	err = json.Unmarshal(jsonContents, &cfg)
 	if err != nil {
-		return cfg, fmt.Errorf("Could not load %s: %v", pathToJson, err)
+		return cfg, fmt.Errorf("Could not load %s: %v", pathToJSON, err)
 	}
 
 	for _, d := range cfg.Domains {
 		if d.Provider == "gcp" {
 			p, ok := d.ProviderConfig["project_id"]
 			if !ok {
-				return cfg, fmt.Errorf("\"project_id\" is required for Cloud DNS config.")
+				return cfg, fmt.Errorf("\"project_id\" is required for Cloud DNS config")
 			}
 			project, ok := p.(string)
 			if !ok {
-				return cfg, fmt.Errorf("\"project_id\" must be a string.")
+				return cfg, fmt.Errorf("\"project_id\" must be a string")
 			}
 
 			z, ok := d.ProviderConfig["managed_zone"]
 			if !ok {
-				return cfg, fmt.Errorf("\"managed_zone\" is required for Cloud DNS config.")
+				return cfg, fmt.Errorf("\"managed_zone\" is required for Cloud DNS config")
 			}
 			zone, ok := z.(string)
 			if !ok {
-				return cfg, fmt.Errorf("\"managed_zone\" must be a string.")
+				return cfg, fmt.Errorf("\"managed_zone\" must be a string")
 			}
 
 			b, err := gcp.NewCloudDNSBackend(project, zone)
 			if err != nil {
-				return cfg, fmt.Errorf("Could not create Cloud DNS backend: %#v", err)
+				return cfg, fmt.Errorf("Could not create Cloud DNS backend: %v", err)
 			}
 			d.Backend = b
 		} else {
@@ -109,6 +112,7 @@ func getConfig(pathToJson string) (Config, error) {
 	return cfg, nil
 }
 
+// Main is the main function for the cloud-dyndns-client command. It returns the OS exit code.
 func Main() int {
 	addr := flag.String("addr", ":8080", "Address to listen on for health checks.")
 	version := flag.Bool("version", false, "Print the version and exit.")
