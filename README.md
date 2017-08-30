@@ -19,7 +19,7 @@ cloud-dyndns-client requires **Go 1.8**.
 go get github.com/IanLewis/cloud-dyndns-client/cmd/cloud-dyndns-client
 ```
 
-This will download the code, compile it, and leave an `embedmd` binary
+This will download the code, compile it, and leave an `cloud-dyndns-client` binary
 in `$GOPATH/bin`.
 
 ## Usage
