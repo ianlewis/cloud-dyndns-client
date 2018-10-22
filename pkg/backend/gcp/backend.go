@@ -22,7 +22,7 @@ import (
 	"golang.org/x/oauth2/google"
 	dns "google.golang.org/api/dns/v1"
 
-	"github.com/IanLewis/cloud-dyndns-client/pkg/backend"
+	"github.com/ianlewis/cloud-dyndns-client/pkg/backend"
 )
 
 var cloudDnsScopes = []string{

@@ -30,9 +30,9 @@ import (
 
 	"golang.org/x/sync/errgroup"
 
-	"github.com/IanLewis/cloud-dyndns-client/pkg/backend"
-	"github.com/IanLewis/cloud-dyndns-client/pkg/backend/gcp"
-	"github.com/IanLewis/cloud-dyndns-client/pkg/sync"
+	"github.com/ianlewis/cloud-dyndns-client/pkg/backend"
+	"github.com/ianlewis/cloud-dyndns-client/pkg/backend/gcp"
+	"github.com/ianlewis/cloud-dyndns-client/pkg/sync"
 )
 
 // VERSION is the current version of the application.
