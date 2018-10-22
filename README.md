@@ -16,7 +16,7 @@ cloud-dyndns-client requires **Go 1.8**.
 `go get`:
 
 ```
-go get github.com/IanLewis/cloud-dyndns-client/cmd/cloud-dyndns-client
+go get github.com/ianlewis/cloud-dyndns-client/cmd/cloud-dyndns-client
 ```
 
 This will download the code, compile it, and leave an `cloud-dyndns-client` binary
@@ -55,11 +55,13 @@ Create a `config.json` for the client. Enter the domain name you want to update,
 
 ```
 {
-  "mydomain.example.com": {
-    "provider": "gcp",
-    "provider_config": {
-       "project_id": "example-project",
-       "managed_zone": "example-zone",
+  "domains": {
+    "mydomain.example.com": {
+      "provider": "gcp",
+      "provider_config": {
+         "project_id": "example-project",
+         "managed_zone": "example-zone",
+      }
     }
   }
 }
