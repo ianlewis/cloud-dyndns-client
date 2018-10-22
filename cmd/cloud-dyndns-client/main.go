@@ -36,7 +36,7 @@ import (
 )
 
 // VERSION is the current version of the application.
-var VERSION = "0.1.4"
+var VERSION = "0.1.5"
 
 // Domain is a single domain listed in the configuration file.
 type Domain struct {
@@ -113,7 +113,7 @@ func getConfig(pathToJSON string) (Config, error) {
 }
 
 // Main is the main function for the cloud-dyndns-client command. It returns the OS exit code.
-func Main() int {
+func main() {
 	addr := flag.String("addr", ":8080", "Address to listen on for health checks.")
 	version := flag.Bool("version", false, "Print the version and exit.")
 	config := flag.String("config", "/etc/cloud-dyndns-client/config.json", "The path to the JSON config file.")
@@ -122,12 +122,12 @@ func Main() int {
 
 	if *version {
 		fmt.Println(VERSION)
-		return 0
+		return
 	}
 
 	cfg, err := getConfig(*config)
 	if err != nil {
-		log.Fatalf("Error reading config: %#v", err)
+		log.Fatalf("Error reading config: %v", err)
 	}
 
 	// Convert config to sync records
@@ -160,6 +160,7 @@ func Main() int {
 	ctx, cancel := context.WithCancel(context.Background())
 	wg, ctx := errgroup.WithContext(ctx)
 
+	// TODO: Refactor and move this code to it's own package
 	wg.Go(func() error { return syncer.Run(ctx.Done()) })
 	wg.Go(func() error { return poller.Run(ctx.Done()) })
 	wg.Go(func() error {
@@ -182,6 +183,7 @@ func Main() int {
 			}
 		}
 	})
+	// TODO: Refactor and move to it's own package
 	wg.Go(func() error {
 		// This goroutine sets up health checks on an HTTP endpoint.
 		// It's a bit complicated as it is necessary to gracefully
@@ -221,19 +223,13 @@ func Main() int {
 	signal.Notify(signals, syscall.SIGINT, syscall.SIGTERM)
 	select {
 	case s := <-signals:
-		log.Printf("Received signal %#v, exiting...", s)
+		log.Printf("Received signal %v, exiting...", s)
 	case <-ctx.Done():
 	}
 	cancel()
 
 	if err := wg.Wait(); err != nil {
-		log.Printf("Unhandled error received. Exiting: %s %#v", err.Error(), err)
-		return 1
+		log.Fatalf("Unhandled error received. Exiting: %v", err)
+		os.Exit(1)
 	}
-
-	return 0
-}
-
-func main() {
-	os.Exit(Main())
 }

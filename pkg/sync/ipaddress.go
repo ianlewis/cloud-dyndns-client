@@ -83,7 +83,7 @@ func (p *IPAddressPoller) poll() error {
 		return nil
 	}
 
-	return fmt.Errorf("Could not obtain IP address: %s %#v", lastErr.Error(), lastErr)
+	return fmt.Errorf("Could not obtain IP address: %v", lastErr)
 }
 
 // request() makes a request to a URL to get the internet IP address.
@@ -102,7 +102,7 @@ func request(url string) (string, error) {
 		return "", err
 	}
 	if resp.StatusCode != http.StatusOK {
-		return "", fmt.Errorf("Got status code from %s: %s", url, resp.StatusCode)
+		return "", fmt.Errorf("Got status code from %q: %d", url, resp.StatusCode)
 	}
 
 	z := html.NewTokenizer(resp.Body)
@@ -122,24 +122,21 @@ func request(url string) (string, error) {
 			}
 		}
 	}
-
-	return "", fmt.Errorf("Could not obtain IP address from html body")
 }
 
 // Run() starts the main loop for the poller.
 func (i *IPAddressPoller) Run(stopCh <-chan struct{}) error {
 	if err := i.poll(); err != nil {
-		log.Printf("Error polling for IP: %s %#v", err.Error(), err)
+		log.Printf("Error polling for IP: %v", err)
 	}
 	for {
 		select {
 		case <-time.After(i.pollInterval):
 			if err := i.poll(); err != nil {
-				log.Printf("Error polling for IP: %s %#v", err.Error(), err)
+				log.Printf("Error polling for IP: %v", err)
 			}
 		case <-stopCh:
 			return nil
 		}
 	}
-	return nil
 }

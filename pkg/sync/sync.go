@@ -112,10 +112,10 @@ func (s *Syncer) UpdateRecord(dnsName, dnsType string, ttl int64, data []string)
 	return fmt.Errorf("Domain %s not registered.", dnsName)
 }
 
-// needsUpdate() returns true if the first DNSRecord needs to be
-// updated with the remote backend as compared to the remote
-// version of the DNSRecord.
-func needsUpdate(l backend.DNSRecord, r backend.DNSRecord) bool {
+// needsUpdate() compares the left/local DNSRecord against the right/remote
+// DNSRecord and returns true if the record needs to be updated in the remote
+// backend.
+func needsUpdate(l, r backend.DNSRecord) bool {
 	if l == nil {
 		return false
 	}
@@ -175,14 +175,16 @@ func (s *Syncer) pollSingle(d *domainObj) error {
 
 // poll() runs a loop to poll the backend and update the remote cache.
 func (s *Syncer) poll(d *domainObj, stopCh <-chan struct{}) {
+	// Start by polling the domain to initialize the remote value and local cache
+	// TODO: Implement some exponential retry backoff logic in case poll interval is long
 	if err := s.pollSingle(d); err != nil {
-		log.Printf("Error polling DNS record %s %#v %#v %s", err.Error(), d, err)
+		log.Printf("Error polling DNS record %q: %v", d.managed.Name(), err)
 	}
 	for {
 		select {
 		case <-time.After(s.pollInterval):
 			if err := s.pollSingle(d); err != nil {
-				log.Printf("Error polling DNS record: %s %#v %#v", err.Error(), d, err)
+				log.Printf("Error polling DNS record %q: %v", d.managed.Name(), err)
 			}
 		case <-stopCh:
 			return
@@ -210,7 +212,7 @@ func (s *Syncer) syncSingle(d *domainObj) error {
 	if d.remote != nil {
 		deletions = []backend.DNSRecord{d.remote}
 	}
-	log.Printf("Updating record: %#v", d.managed)
+	log.Printf("Updating record %v", d.managed.Name())
 	err := d.backend.UpdateRecords(ctx, additions, deletions)
 	if err != nil {
 		return err
@@ -246,6 +248,8 @@ func (s *Syncer) sync(d *domainObj, stopCh <-chan struct{}) {
 
 // Run() starts the sync and poll loops
 func (s *Syncer) Run(stopCh <-chan struct{}) error {
+	// Run a sync and poll loop for each domain. Sync and poll loops are
+	// separated so that polling and syncing do not block on each other.
 	for _, d := range s.domains {
 		go s.poll(d, stopCh)
 		go s.sync(d, stopCh)
