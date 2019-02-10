@@ -114,7 +114,7 @@ func getConfig(pathToJSON string) (Config, error) {
 
 // Main is the main function for the cloud-dyndns-client command. It returns the OS exit code.
 func main() {
-	addr := flag.String("addr", ":8080", "Address to listen on for health checks.")
+	addr := flag.String("addr", "", "Address to listen on for health checks.")
 	version := flag.Bool("version", false, "Print the version and exit.")
 	config := flag.String("config", "/etc/cloud-dyndns-client/config.json", "The path to the JSON config file.")
 
@@ -184,38 +184,40 @@ func main() {
 		}
 	})
 	// TODO: Refactor and move to it's own package
-	wg.Go(func() error {
-		// This goroutine sets up health checks on an HTTP endpoint.
-		// It's a bit complicated as it is necessary to gracefully
-		// shutdown the http server.
-		mux := http.NewServeMux()
-		mux.HandleFunc("/_status/healthz", func(w http.ResponseWriter, r *http.Request) {
-			w.Write([]byte("OK"))
+	if *addr != "" {
+		wg.Go(func() error {
+			// This goroutine sets up health checks on an HTTP endpoint.
+			// It's a bit complicated as it is necessary to gracefully
+			// shutdown the http server.
+			mux := http.NewServeMux()
+			mux.HandleFunc("/_status/healthz", func(w http.ResponseWriter, r *http.Request) {
+				w.Write([]byte("OK"))
+			})
+
+			srv := &http.Server{
+				Addr:    *addr,
+				Handler: mux,
+			}
+
+			// Since srv.ListenAndServe() blocks we need to start it in
+			// a goroutine so the select can monitor the context's done
+			// channel as well as if the server returns an error.
+			errChan := make(chan error, 1)
+			go func(errChan chan error) {
+				log.Printf("Listening on %s...", *addr)
+				errChan <- srv.ListenAndServe()
+			}(errChan)
+
+			select {
+			case <-ctx.Done():
+				shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 10*time.Second)
+				defer shutdownCancel()
+				return srv.Shutdown(shutdownCtx)
+			case err := <-errChan:
+				return err
+			}
 		})
-
-		srv := &http.Server{
-			Addr:    *addr,
-			Handler: mux,
-		}
-
-		// Since srv.ListenAndServe() blocks we need to start it in
-		// a goroutine so the select can monitor the context's done
-		// channel as well as if the server returns an error.
-		errChan := make(chan error, 1)
-		go func(errChan chan error) {
-			log.Printf("Listening on %s...", *addr)
-			errChan <- srv.ListenAndServe()
-		}(errChan)
-
-		select {
-		case <-ctx.Done():
-			shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 10*time.Second)
-			defer shutdownCancel()
-			return srv.Shutdown(shutdownCtx)
-		case err := <-errChan:
-			return err
-		}
-	})
+	}
 
 	// Wait for SIGINT or SIGTERM signals and shutdown the application if
 	// one is received.
