@@ -212,7 +212,7 @@ func (s *Syncer) syncSingle(d *domainObj) error {
 	if d.remote != nil {
 		deletions = []backend.DNSRecord{d.remote}
 	}
-	log.Printf("Updating record %v", d.managed.Name())
+	log.Printf("Updating record %v: old: %v, new: %v", d.managed.Name(), d.remote.Data()[0], d.managed.Data()[0])
 	err := d.backend.UpdateRecords(ctx, additions, deletions)
 	if err != nil {
 		return err
